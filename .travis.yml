@@ -1,0 +1,40 @@
+sudo: required
+services:
+    - docker
+    
+before_install:
+    - docker build -t jazs/react-test -f ./client/Dockerfile.dev ./client
+ 
+script:
+    - docker run jazs/react-test npm test -- --coverage
+
+after_success:
+    - docker build -t jazs/multi-client ./client
+    - docker build -t jazs/multi-nginx ./nginx
+    - docker build -t jazs/multi-server ./server
+    - docker build -t jazs/multi-worker ./worker
+    # Log in to the docker CLI
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+    # Take those images and push them to docker hub
+    - docker push jazs/multi-client
+    - docker push jazs/multi-nginx
+    - docker push jazs/multi-server
+    - docker push jazs/multi-worker
+
+deploy:
+    provider: elasticbeanstalk
+    region: us-east-2
+    app: multi-docker
+    env: MultiDocker-env
+    bucket_name: elasticbeanstalk-us-east-2-034445363307
+    bucket_path: docker-multi
+    on:
+        branch: master
+    access_key_id: $AWS_ACCESS_KEY
+    secret_access_key:
+        secure: $AWS_SECRET_KEY
+
+    
+    
+    
+    
